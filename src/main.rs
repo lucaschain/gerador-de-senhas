@@ -1,80 +1,124 @@
 use dioxus::prelude::*;
-use rand::Rng;
-
-fn main() {
-    launch(App);
-}
+use dioxus_web::launch;
+use rand::{Rng, SeedableRng};
+use rand::rngs::SmallRng;
+use wasm_bindgen::JsCast;
+use web_sys::{Blob, Url, window};
+use js_sys::Array;
 
 #[component]
 fn App() -> Element {
+    let mut quantidade = use_signal(|| 8);
     let mut senha = use_signal(|| String::new());
+    let mut escuro = use_signal(|| false);
+
+    let tema_fundo = if *escuro.read() { "#1e1e1e" } else { "#f0f0f0" };
+    let tema_texto = if *escuro.read() { "#ffffff" } else { "#000000" };
+    let sidebar_bg = if *escuro.read() { "#2c2c2c" } else { "#f9f9f9" };
+    let card_bg = if *escuro.read() { "#333333" } else { "#ffffff" };
+    let card_border = if *escuro.read() { "#555555" } else { "#ccc" };
 
     rsx! {
         div {
-            style: "
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                gap: 20px;
-                font-family: monospace;
-            ",
+            style: "display: flex; height: 100vh; font-family: monospace; background-color: {tema_fundo}; color: {tema_texto};",
+            div {
+                style: "width: 220px; background-color: {sidebar_bg}; padding: 20px; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid #ddd;",
+                h2 { "⚙️ Opções" }
+                ul {
+                    style: "list-style: none; padding: 0; margin: 0;",
+                    li {
+                        style: "padding: 8px 0; cursor: pointer; font-size: 18px; background-color: #0984ff; color: white; border-radius: 6px; text-align: center; margin-bottom: 16px;",
+                        onclick: move |_| {
+                            let atual = *escuro.read();
+                            escuro.set(!atual);
+                        },
+                        if *escuro.read() { "☀️ Tema Claro" } else { "🌙 Tema Escuro" }
+                    }
+                    li {
+                        style: "padding: 8px 0; cursor: pointer; font-size: 18px; background-color: #00b894; color: white; border-radius: 6px; text-align: center;",
+                        onclick: move |_| {
+                            let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()_+-=[]{}|;:,.<>?";
+                            let mut rng = SmallRng::from_entropy();
+                            let len = quantidade.read().max(1);
 
-            h1 {
-                style: "font-size: 48px; color: #000000ff;",
-                "🔐 Gerador de Senhas Fortes"
-            },
+                            let senhas: Vec<String> = (0..10).map(|_| {
+                                (0..len).map(|_| {
+                                    let idx = rng.gen_range(0..charset.len());
+                                    charset[idx] as char
+                                }).collect()
+                            }).collect();
 
-            button {
-                style: "
-                    background-color: #0984ffff;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    font-size: 16px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    transition: background-color 0.3s ease;
-                ",
-                onclick: move |_| {
-                    const CHARSET_1: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()_+-=[]{}|;:,.<>?/";
-                    const CHARSET_2: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
-                    const CHARSET_3: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-                    const CHARSET_4: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
+                            let conteudo = senhas.join("\n");
 
-                    let uppercase = true;
-                    let special = true;
-                    let numbers = true;
+                            let array = Array::new();
+                            array.push(&wasm_bindgen::JsValue::from_str(&conteudo));
 
-                    let charset = if uppercase && special && numbers {
-                        CHARSET_1
-                    } else if uppercase && numbers {
-                        CHARSET_2
-                    } else if uppercase {
-                        CHARSET_3
-                    } else {
-                        CHARSET_4
-                    };
-                    
-                    let mut rng = rand::thread_rng();
-                    let password: String = (0..30)
-                        .map(|_| {
+                            let blob = Blob::new_with_str_sequence(&array).unwrap();
+                            let url = Url::create_object_url_with_blob(&blob).unwrap();
+
+                            let document = window().unwrap().document().unwrap();
+                            let a = document.create_element("a").unwrap();
+                            a.set_attribute("href", &url).unwrap();
+                            a.set_attribute("download", "senhas.txt").unwrap();
+                            a.set_attribute("style", "display: none").unwrap();
+
+                            document.body().unwrap().append_child(&a).unwrap();
+                            let a_html = a.dyn_ref::<web_sys::HtmlElement>().unwrap();
+                            a_html.click();
+                            a.remove();
+                        },
+                        "📥 Baixar 10 Senhas Seguras"
+                    }
+                    li {
+                        style: "padding: 8px 0;",
+                        label {
+                            style: "font-size: 14px;",
+                            "Comprimento da senha: {quantidade.read()}"
+                        }
+                        input {
+                            r#type: "range",
+                            min: "1",
+                            max: "100",
+                            value: quantidade.read().to_string(),
+                            oninput: move |evt| {
+                                if let Ok(val) = evt.value().parse::<i32>() {
+                                    quantidade.set(val);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            div {
+                style: "flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; padding: 20px;",
+                h1 {
+                    style: "font-size: 32px; margin-bottom: 8px;",
+                    "🔐 Gerador de Senhas Fortes"
+                }
+                button {
+                    style: "background-color: #0984ff; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; transition: background-color 0.3s ease;",
+                    onclick: move |_| {
+                        let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()_+-=[]{}|;:,.<>?";
+                        let mut rng = SmallRng::from_entropy();
+                        let len = quantidade.read().max(1);
+                        let password: String = (0..len).map(|_| {
                             let idx = rng.gen_range(0..charset.len());
-                            CHARSET_1[idx] as char
-                        })
-                        .collect();
-                    senha.set(password);
-                },
-                "Gerar Nova Senha"
-            },
-
-            h2 {
-                style: "font-size: 24px; color: #000000ff;",
-                "Senha Gerada:"
-            },
-
-            h2 { "{senha.read()}" }
+                            charset[idx] as char
+                        }).collect();
+                        senha.set(password);
+                    },
+                    "🔁 Gerar Nova Senha"
+                }
+                h2 { "Senha Gerada:" }
+                div {
+                    style: "background: {card_bg}; padding: 10px 16px; border-radius: 6px; border: 1px solid {card_border}; font-size: 18px; max-width: 100%; word-break: break-word;",
+                    "{senha.read()}"
+                }
+            }
         }
     }
+}
+
+fn main() {
+    launch(App);
 }
