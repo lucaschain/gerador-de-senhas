@@ -1,0 +1,44 @@
+[package]
+name = "senhas"
+version = "0.1.0"
+edition = "2021"
+authors = ["gabriel.leonardo.cruz2012@gmail.com"]
+
+[lib]
+path = "src/main.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+dioxus = "0.6.0"
+dioxus-web = "0.6.0"
+rand = { version = "0.8", features = ["small_rng"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+web-sys = { version = "0.3", features = ["Blob", "Url", "HtmlElement", "Document", "Window"] }
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
