@@ -1,6 +1,8 @@
 [application]
 
 [web.app]
+base_path = "gerador-de-senhas"
+out_dir = "docs"
 
 # HTML title tag content
 title = "senhas"
