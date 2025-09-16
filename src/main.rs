@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 use dioxus_web::launch;
-use rand::{Rng, SeedableRng};
-use rand::rngs::SmallRng;
-use wasm_bindgen::JsCast;
-use web_sys::{Blob, Url, window};
 use js_sys::Array;
+use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
+use wasm_bindgen::JsCast;
+use web_sys::{window, Blob, Url};
 
 #[component]
 fn App() -> Element {
@@ -189,4 +189,3 @@ fn App() -> Element {
 fn main() {
     launch(App);
 }
-
