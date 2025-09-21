@@ -10,6 +10,5 @@ cargo binstall dioxus-cli
 
 dx serve #caso queira testar antes de compilar
 
-
 dx build --release #pra poder compilar
 ```
